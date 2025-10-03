@@ -1,47 +1,53 @@
 #include <Stepper.h>
 
-// Define steps per revolution of your stepper motor (adjust this!)
-const int stepsPerRevolution = 200;  
+const int stepsPerRevolution = 2048;  // 28BYJ-48 with gearbox
+const int in1Pin = 8;
+const int in2Pin = 9;
+const int in3Pin = 10;
+const int in4Pin = 11;
 
-// Create stepper object (pins depend on your driver wiring)
-Stepper myStepper(stepsPerRevolution, 8, 9, 10, 11);
+Stepper myStepper(stepsPerRevolution, in1Pin, in3Pin, in2Pin, in4Pin);
 
-String inputString = "";   // Store incoming serial command
+String inputCommand = "";
 
 void setup() {
   Serial.begin(9600);
-  Serial.println("Stepper Motor Control Ready!");
-  Serial.println("Type commands like: rotate 180 degrees or rotate -270 degrees");
+  myStepper.setSpeed(15);  // RPM
+  Serial.println("Stepper Motor Ready!");
+  Serial.println("Type: rotate <angle>");
+  Serial.println("Example: rotate 90  or  rotate -180");
 }
 
 void loop() {
-  // Check if serial data is available
-  if (Serial.available()) {
-    inputString = Serial.readStringUntil('\n'); // Read the whole line
-    inputString.trim(); // Remove extra spaces
+  // Check if data is available
+  if (Serial.available() > 0) {
+    inputCommand = Serial.readStringUntil('\n');
+    inputCommand.trim(); // remove spaces/newlines
 
-    if (inputString.startsWith("rotate")) {
-      // Extract number part (angle)
-      int firstSpace = inputString.indexOf(' ');
-      int secondSpace = inputString.indexOf(' ', firstSpace + 1);
+    if (inputCommand.startsWith("rotate")) {
+      int spaceIndex = inputCommand.indexOf(' ');
+      if (spaceIndex > 0) {
+        String angleStr = inputCommand.substring(spaceIndex + 1);
+        float angle = angleStr.toFloat();
 
-      String angleStr = inputString.substring(firstSpace + 1, secondSpace);
-      int angle = angleStr.toInt();
+        // Convert angle to steps
+        int steps = (int)(angle / 360.0 * stepsPerRevolution);
 
-      // Convert angle to steps
-      long stepsToMove = (long)angle * stepsPerRevolution / 360;
+        Serial.print("Rotating ");
+        Serial.print(angle);
+        Serial.println(" degrees...");
+        
+        myStepper.step(steps);
 
-      Serial.print("Rotating ");
-      Serial.print(angle);
-      Serial.println(" degrees...");
-
-      // Rotate motor
-      myStepper.step(stepsToMove);
-
-      Serial.println("Done.");
-    }
-    else {
-      Serial.println("Invalid command. Use format: rotate <angle> degrees");
+        Serial.println("Done.");
+      } else {
+        Serial.println("Error: use format 'rotate <angle>'");
+      }
+    } else {
+      Serial.println("Unknown command. Use: rotate <angle>");
     }
   }
 }
+
+
+//stepper motor
